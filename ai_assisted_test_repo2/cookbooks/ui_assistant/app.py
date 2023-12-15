@@ -33,7 +33,7 @@ async def process_thread_message(
                 await message_references[id].send()
         elif isinstance(content_message, MessageContentImageFile):
             image_id = content_message.image_file.file_id
-            response = await client.files.with_raw_response.content(image_id)
+            response = await client.files.with_raw_response.retrieve_content(image_id)
             elements = [
                 cl.Image(
                     name=image_id,
@@ -69,7 +69,7 @@ class DictToObject:
 async def start_chat():
     thread = await client.beta.threads.create()
     cl.user_session.set("thread", thread)
-    await cl.Message(author="assistant", content="Lets test some UI!").send()
+    await cl.Message(author="assistant", content="Ask me math questions!").send()
 
 @cl.on_message
 async def run_conversation(message_from_ui: cl.Message):
