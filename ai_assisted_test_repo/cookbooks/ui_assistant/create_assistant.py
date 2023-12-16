@@ -1,3 +1,4 @@
+import importlib
 import json
 from openai import AsyncOpenAI
 import asyncio
@@ -30,7 +31,20 @@ tool_map = {
 }
 
 for tool in ui_tools:
-    tool_map[tool["function"]["name"]] = fake_tool
+    # Dynamically import the module based on the tool function name under handlers package
+    module_name = 'ai_assisted_test_repo.tools.ui.handlers.' + tool["function"]["name"]
+    
+    # Import the module using importlib
+    module = importlib.import_module(module_name)
+    
+    # Assume the function name inside the module is the same as the module name
+    # Retrieve the function from the module
+    func_name = tool["function"]["name"]
+    # getattr is used to get a reference to the function by name
+    function = getattr(module, func_name)
+    
+    # Mapping tool function name to the actual function object
+    tool_map[func_name] = function
 
 
 async def create():

@@ -1,18 +1,16 @@
 from bs4 import BeautifulSoup
 from ai_assisted_test_repo.tools.ui import model
-from playwright import Page
 
 
-def PageContent(args: model.PageContent):
-    if "page" in args:
-        page: Page = args["page"]
-    else:
-        raise ValueError(f"args needs to have a page object provided")
-
+async def PageContent(browser_context, page, **kwargs):
     html = await page.content()
     soup = BeautifulSoup(html, 'html.parser')
-    elements = soup.body.find_all(args["items_to_find"])
+    items = kwargs.get("items_to_find", [model.BeautifulSoupElementTypes])
+    elements = soup.body.find_all(items)
     list_to_return = []
     for element in elements:
         list_to_return.append(element)
-    return str(list_to_return)
+    if list_to_return:
+        return str(list_to_return)
+    else:
+        return "Could not find any elements of that type"

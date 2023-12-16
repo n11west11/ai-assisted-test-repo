@@ -1,25 +1,21 @@
 from ai_assisted_test_repo.tools.ui import model
-from playwright import Page
 
 
-async def ExecutePlaywrightOperation(args: model.ExecutePlaywrightOperation):
-  # code goes
-    if "page" in args:
-        page: Page = args["page"]
-    else:
-        raise ValueError(f"args needs to have a page object provided")
+async def ExecutePlaywrightOperation(browser_context, page, **kwargs):
 
-    if not hasattr(page, args["operation"]):
-            raise ValueError(f"Invalid operation: {args['operation']}")
+    if not hasattr(page, kwargs["operation"]):
+            raise ValueError(f"Invalid operation: {kwargs['operation']}")
     
-    operation_args = args["operation"]
+    operation = kwargs["operation"]
 
-    if "content" in args["operation"]:
-        return {"Please use the PageContent function to evaluate page content"}
+    if "content" in kwargs["operation"]:
+        return "Please use the PageContent function to evaluate page content"
 
-    method = getattr(page, args["operation"])
+    method = getattr(page, operation)
     try:
-        await method(*operation_args)
+        args = kwargs.get("args", {})
+        await method(*args)
     except Exception as e:
-        return {"error": "An error occured, if it was a TimeoutError, please fetch page content",
-                "exception": str(e)}
+        return f"An error occured, if it was a TimeoutError, please fetch page content exception str{e}"
+    
+    return "Success"
