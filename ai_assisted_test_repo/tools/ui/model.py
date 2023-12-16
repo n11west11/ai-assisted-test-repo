@@ -3,27 +3,14 @@ from enum import Enum
 import os
 from typing import Optional, Dict, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 
 from ai_assisted_test_repo.tools.export_model import export_model
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(MODULE_DIR, "functions")
 
-
-class PlaywrightOperationType(str, Enum):
-    goto = "goto"
-    get_by_text = "get_by_text"
-    locator = "locator"
-    click = "click"
-    fill = "fill"
-    screenshot = "screenshot"
-    scroll_into_view_if_needed = "scroll_into_view_if_needed"
-    go_back = "go_back"
-    go_forward = "go_forward"
-    hover = "hover"
-
-
+# region BeautifulSoup
 class BeautifulSoupElementTypes(str, Enum):
     div = "div"
     button = "button"
@@ -55,6 +42,20 @@ class BeautifulSoupElementTypes(str, Enum):
     h4 = "h4"
     h5 = "h5"
     h6 = "h6"
+# endregion
+
+# region Playwright
+class PlaywrightOperationType(str, Enum):
+    goto = "goto"
+    get_by_text = "get_by_text"
+    locator = "locator"
+    click = "click"
+    fill = "fill"
+    screenshot = "screenshot"
+    scroll_into_view_if_needed = "scroll_into_view_if_needed"
+    go_back = "go_back"
+    go_forward = "go_forward"
+    hover = "hover"
 
 
 class PageContent(BaseModel):
@@ -80,6 +81,12 @@ class ExecutePlaywrightOperation(BaseModel):
     class Config:
         use_enum_values = True
 
+# endregion
+        
+# region Browserless
+
+
+# endregion
 
 if __name__ == "__main__":
     # export models to json
