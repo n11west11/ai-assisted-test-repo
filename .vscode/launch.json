@@ -2,13 +2,24 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Module",
+            "name": "Run UI Assistant",
             "type": "python",
             "request": "launch",
             "module": "chainlit",
             "console": "integratedTerminal",
             "args": ["run", "app.py", "-w", "-d"],
-            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/ui_assistant"
-        }
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/ui_assistant",
+            "justMyCode": false
+        }, 
+        {
+            "name": "Run UI LangChain Assistant",
+            "type": "python",
+            "request": "launch",
+            "module": "chainlit",
+            "console": "integratedTerminal",
+            "args": ["run", "app.py", "-w", "-d"],
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/langchain_ui_assistant",
+            "justMyCode": false
+        },
     ]
 }

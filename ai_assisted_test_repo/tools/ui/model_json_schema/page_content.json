@@ -1,0 +1,70 @@
+{
+    "type": "function",
+    "function": {
+        "name": "page_content",
+        "description": "\n    Parameters for scraping page content.\n\n    Note:\n    This function can return a lot of text, be carefull requesting both items to find\n    and scrape_text in one function call\n\n    Attributes:\n    - items_to_find (Optional[List[BeautifulSoupElementTypes]]): List of elements to find on the page.\n    - scrape_text (bool): Flag to scrape text from the page.\n    ",
+        "parameters": {
+            "$defs": {
+                "BeautifulSoupElementTypes": {
+                    "enum": [
+                        "div",
+                        "button",
+                        "input",
+                        "select",
+                        "textarea",
+                        "audio",
+                        "video",
+                        "embed",
+                        "iframe",
+                        "img",
+                        "object",
+                        "canvas",
+                        "map",
+                        "meter",
+                        "progress",
+                        "svg",
+                        "template",
+                        "details",
+                        "dialog",
+                        "menu",
+                        "summary",
+                        "span",
+                        "a",
+                        "p",
+                        "h1",
+                        "h2",
+                        "h3",
+                        "h4",
+                        "h5",
+                        "h6"
+                    ],
+                    "title": "BeautifulSoupElementTypes",
+                    "type": "string"
+                }
+            },
+            "description": "Parameters for scraping page content.\n\nNote:\nThis function can return a lot of text, be carefull requesting both items to find\nand scrape_text in one function call\n\nAttributes:\n- items_to_find (Optional[List[BeautifulSoupElementTypes]]): List of elements to find on the page.\n- scrape_text (bool): Flag to scrape text from the page.",
+            "properties": {
+                "items_to_find": {
+                    "description": "List of elements to find on the page",
+                    "items": {
+                        "$ref": "#/$defs/BeautifulSoupElementTypes"
+                    },
+                    "maxItems": 5,
+                    "title": "Items To Find",
+                    "type": "array"
+                },
+                "scrape_text": {
+                    "description": "Flag to scrape text from the page",
+                    "title": "Scrape Text",
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "items_to_find",
+                "scrape_text"
+            ],
+            "title": "PageContentArgs",
+            "type": "object"
+        }
+    }
+}
