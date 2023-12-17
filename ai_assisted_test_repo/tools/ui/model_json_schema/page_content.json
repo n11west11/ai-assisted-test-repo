@@ -1,8 +1,8 @@
 {
     "type": "function",
     "function": {
-        "name": "PageContent",
-        "description": "\n     Model representing the content of a webpage.\n    ",
+        "name": "page_content",
+        "description": "\n    Parameters for scraping page content.\n\n    Note:\n    This function can return a lot of text, be carefull requesting both items to find\n    and scrape_text in one function call\n\n    Attributes:\n    - items_to_find (Optional[List[BeautifulSoupElementTypes]]): List of elements to find on the page.\n    - scrape_text (bool): Flag to scrape text from the page.\n    ",
         "parameters": {
             "$defs": {
                 "BeautifulSoupElementTypes": {
@@ -42,34 +42,28 @@
                     "type": "string"
                 }
             },
-            "description": "Model representing the content of a webpage.",
+            "description": "Parameters for scraping page content.\n\nNote:\nThis function can return a lot of text, be carefull requesting both items to find\nand scrape_text in one function call\n\nAttributes:\n- items_to_find (Optional[List[BeautifulSoupElementTypes]]): List of elements to find on the page.\n- scrape_text (bool): Flag to scrape text from the page.",
             "properties": {
                 "items_to_find": {
-                    "allOf": [
-                        {
-                            "$ref": "#/$defs/BeautifulSoupElementTypes"
-                        }
-                    ],
-                    "description": "type of element to search for"
+                    "description": "List of elements to find on the page",
+                    "items": {
+                        "$ref": "#/$defs/BeautifulSoupElementTypes"
+                    },
+                    "maxItems": 5,
+                    "title": "Items To Find",
+                    "type": "array"
                 },
-                "text_to_find": {
-                    "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "null"
-                        }
-                    ],
-                    "default": "",
-                    "description": "text to find in the page content",
-                    "title": "Text To Find"
+                "scrape_text": {
+                    "description": "Flag to scrape text from the page",
+                    "title": "Scrape Text",
+                    "type": "boolean"
                 }
             },
             "required": [
-                "items_to_find"
+                "items_to_find",
+                "scrape_text"
             ],
-            "title": "PageContent",
+            "title": "PageContentArgs",
             "type": "object"
         }
     }

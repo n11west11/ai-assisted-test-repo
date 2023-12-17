@@ -211,8 +211,8 @@ async def run_conversation(message_from_ui: cl.Message):
                             )
                             await message_references[tool_call.id].send()
                             tool_output = await tool_map[function_name](
-                                browser_context,
-                                page,
+                                browser_context=browser_context,
+                                page=page,
                                 **json.loads(tool_call.function.arguments))
                             message_references[tool_call.id] = cl.Message(
                                 author=function_name,
@@ -225,6 +225,7 @@ async def run_conversation(message_from_ui: cl.Message):
                                         ),],
                                 parent_id=context.session.root_message.id,
                             )
+                            await message_references[tool_call.id].send()
                             tool_outputs.append(
                                 {"output": tool_output, "tool_call_id": tool_call.id}
                             )

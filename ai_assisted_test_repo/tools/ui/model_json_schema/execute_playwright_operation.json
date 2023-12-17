@@ -1,7 +1,7 @@
 {
     "type": "function",
     "function": {
-        "name": "ExecutePlaywrightOperation",
+        "name": "execute_playwright_operation",
         "description": "\n    Model representing an operation to be executed using Playwright.\n    ",
         "parameters": {
             "$defs": {

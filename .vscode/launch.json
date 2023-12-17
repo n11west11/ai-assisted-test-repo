@@ -8,7 +8,8 @@
             "module": "chainlit",
             "console": "integratedTerminal",
             "args": ["run", "app.py", "-w", "-d"],
-            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/ui_assistant"
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/ui_assistant",
+            "justMyCode": false
         }
     ]
 }

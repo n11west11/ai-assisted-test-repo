@@ -3,6 +3,7 @@ import inspect
 import os
 
 from pydantic import BaseModel
+from ai_assisted_test_repo.tools.ui.registry import function_registry
 
 
 def export_model(model: BaseModel):
@@ -14,13 +15,13 @@ def export_model(model: BaseModel):
     output_dir = os.path.join(caller_dir, "model_json_schema") 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-
-    file_path = os.path.join(output_dir, f"{model.__name__}.json")
+    function_name = function_registry[model.__name__].__name__
+    file_path = os.path.join(output_dir, f"{function_name}.json")
     with open(file_path, "w", encoding="utf-8") as f:
         operation_execute = {
             "type": "function",
                 "function": {
-                    "name": f"{model.__name__}",
+                    "name": function_name,
                     "description": model.__doc__,
                     "parameters": model.model_json_schema()
                 }

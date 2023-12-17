@@ -58,27 +58,41 @@ hide_cot = false
 # Specify a CSS file that can be used to customize the user interface.
 # The CSS file can be served from the public directory or via an external link.
 # custom_css = "/public/test.css"
-
 # Override default MUI light theme. (Check theme.ts)
 [UI.theme.light]
-    #background = "#FAFAFA"
-    #paper = "#FFFFFF"
+background = "#FAFAFA"  # Light grey for a neutral background
+paper = "#FFFFFF"       # White for elements like cards and sheets
 
-    [UI.theme.light.primary]
-        #main = "#F80061"
-        #dark = "#980039"
-        #light = "#FFE7EB"
+[UI.theme.light.primary]
+main = "#F47C30"    # Vibrant orange, reminiscent of Q*bert's color
+dark = "#C35D15"    # A darker shade of the primary color
+light = "#FFA04A"   # A lighter, more playful orange
+
+[UI.theme.light.secondary]
+main = "#5C3FBF"    # Deep purple for a contrasting accent
+dark = "#422C90"    # A darker shade of the secondary color
+light = "#7B6FD6"   # A lighter, more pastel purple
+
+[UI.theme.light.highlight]
+main = "#FFD700"    # Golden yellow for highlights and energy
 
 # Override default MUI dark theme. (Check theme.ts)
 [UI.theme.dark]
-    #background = "#FAFAFA"
-    #paper = "#FFFFFF"
+background = "#1A1A1A"  # Dark grey, simulating the arcade screen
+paper = "#242424"       # Slightly lighter grey for contrast
 
-    [UI.theme.dark.primary]
-        #main = "#F80061"
-        #dark = "#980039"
-        #light = "#FFE7EB"
+[UI.theme.dark.primary]
+main = "#F47C30"    # Keeping the vibrant orange for consistency
+dark = "#C35D15"    # Same dark shade for depth
+light = "#FFA04A"   # Light orange for a pop of color
 
+[UI.theme.dark.secondary]
+main = "#5C3FBF"    # Deep purple to maintain contrast in the dark theme
+dark = "#422C90"    # A darker shade for depth
+light = "#7B6FD6"   # Light purple for subtlety
+
+[UI.theme.dark.highlight]
+main = "#FFD700"    # Golden yellow for a striking pop
 
 [meta]
 generated_by = "0.7.700"
