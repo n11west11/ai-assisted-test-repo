@@ -1,10 +1,6 @@
 {
 	"folders": [
 		{
-			"name": ".venv",
-			"path": "../../.Trash/.venv"
-		},
-		{
 			"name": "ai-assisted-test-repo",
 			"path": "."
 		},
