@@ -65,8 +65,8 @@ paper = "#FFFFFF"       # White for elements like cards and sheets
 
 [UI.theme.light.primary]
 main = "#F47C30"    # Vibrant orange, reminiscent of Q*bert's color
-dark = "#C35D15"    # A darker shade of the primary color
-light = "#FFA04A"   # A lighter, more playful orange
+dark = "#FF4500"    # A very very dark orange color
+light = "#FFA04A"   # A very very light orange
 
 [UI.theme.light.secondary]
 main = "#5C3FBF"    # Deep purple for a contrasting accent

@@ -11,6 +11,7 @@ from openai.types.beta.threads import (
 import chainlit as cl
 from chainlit.context import context
 from create_assistant import tool_map
+from playwright.async_api import async_playwright
 
 api_key = os.environ.get("OPENAI_API_KEY")
 client = AsyncOpenAI(api_key=api_key)
@@ -67,13 +68,27 @@ class DictToObject:
 
 @cl.on_chat_start
 async def start_chat():
+    # region setup a browser context
+    playwright = await async_playwright().start()
+    browser = await playwright.chromium.connect_over_cdp("http://localhost:3000")
+    browser_context = await browser.new_context()
+    page = await browser_context.new_page()
+
+    cl.user_session.set("browser_context", browser_context)
+    cl.user_session.set("page", page)
+
+    # endregion
     thread = await client.beta.threads.create()
     cl.user_session.set("thread", thread)
     await cl.Message(author="assistant", content="Lets test some UI!").send()
 
 @cl.on_message
 async def run_conversation(message_from_ui: cl.Message):
+    browser_context = cl.user_session.get("browser_context")
+    page = cl.user_session.get("page")
+
     thread = cl.user_session.get("thread")  # type: Thread
+    
     # Add the message to the thread
     init_message = await client.beta.threads.messages.create(
         thread_id=thread.id, role="user", content=message_from_ui.content
@@ -183,8 +198,34 @@ async def run_conversation(message_from_ui: cl.Message):
                                 parent_id=context.session.root_message.id,
                             )
                             await message_references[tool_call.id].send()
-
-                            tool_output = tool_map[function_name](**json.loads(tool_call.function.arguments))
+                            message_references[tool_call.id] = cl.Message(
+                                author=function_name,
+                                content="Using page...",
+                                elements=[cl.Image(
+                                            name="Current view",
+                                            content=await page.screenshot(),
+                                            display="inline",
+                                            size="large",
+                                        ),],
+                                parent_id=context.session.root_message.id,
+                            )
+                            await message_references[tool_call.id].send()
+                            tool_output = await tool_map[function_name](
+                                browser_context=browser_context,
+                                page=page,
+                                **json.loads(tool_call.function.arguments))
+                            message_references[tool_call.id] = cl.Message(
+                                author=function_name,
+                                content="New view...",
+                                elements=[cl.Image(
+                                            name="Current view",
+                                            content=await page.screenshot(),
+                                            display="inline",
+                                            size="large",
+                                        ),],
+                                parent_id=context.session.root_message.id,
+                            )
+                            await message_references[tool_call.id].send()
                             tool_outputs.append(
                                 {"output": tool_output, "tool_call_id": tool_call.id}
                             )
