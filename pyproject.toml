@@ -17,6 +17,7 @@ beautifulsoup4 = "^4.12.2"
 langchain = "^0.0.350"
 lxml = "^4.9.3"
 gql = "^3.4.1"
+requests-toolbelt = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 setuptools = "^69.0.2"
