@@ -1,11 +1,16 @@
 from langchain.chat_models import ChatOpenAI
+from langchain_community.tools.playwright.utils import aget_current_page
 from langchain.agents import initialize_agent, AgentExecutor
-from langchain.agents import AgentType
+from langchain.agents import AgentType, load_tools
 from langchain.agents.agent_toolkits import PlayWrightBrowserToolkit
-from playwright.async_api import async_playwright, Browser
+from langchain.memory import ConversationBufferMemory
+from langchain.prompts import MessagesPlaceholder
+from playwright.async_api import async_playwright
+
+
 import chainlit as cl
 from chainlit.input_widget import Select, Switch, Slider
- 
+
 
 @cl.on_settings_update
 async def setup_agent(settings):
@@ -73,17 +78,30 @@ async def start():
     ).send()
     chat_profile = cl.user_session.get("chat_profile")
     await cl.Message(
-        content=f"starting chat using the {chat_profile} chat profile"
+        content=f"Starting chat using the {chat_profile} chat profile"
     ).send()
 
     playwright = await async_playwright().start()
     browser = await playwright.chromium.connect_over_cdp("http://localhost:3000")
-    toolkit = PlayWrightBrowserToolkit.from_browser(async_browser=browser)
-    tools = toolkit.get_tools()
+    playwright_toolkit = PlayWrightBrowserToolkit.from_browser(async_browser=browser)
+    
+    if chat_profile == "UI Test":
+        tools = playwright_toolkit.get_tools()
+    if chat_profile == "GraphQL":
+        tools = load_tools(
+        ["graphql"],
+        graphql_endpoint="https://swapi-graphql.netlify.app/.netlify/functions/index",
+        )
+
+
     llm = ChatOpenAI(temperature=0, streaming=True, model_name="gpt-3.5-turbo")
 
+    memory = ConversationBufferMemory(memory_key="memory", return_messages=True)
+    agent_kwargs = {
+        "extra_prompt_messages": [MessagesPlaceholder(variable_name="memory")],
+    }
     agent = initialize_agent(
-        tools, llm, agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION, verbose=True
+        tools, llm, agent=AgentType.OPENAI_FUNCTIONS, verbose=True, agent_kwargs=agent_kwargs, memory=memory,
     )
     cl.user_session.set("browser", browser)
     cl.user_session.set("agent", agent)
@@ -91,15 +109,14 @@ async def start():
 
 @cl.on_message
 async def main(message: cl.Message):
-            # Sending an action button within a chatbot message
     actions = [
         cl.Action(name="Open debug window", value="example_value", description="Click me!"),
         
         cl.Action(name="Jira", value="TSK-123", description="Interact with Jira"),
     ]
-    browser = cl.user_session.get("browser") # type: Browser
     agent = cl.user_session.get("agent") # type: AgentExecutor
-    page = browser.contexts[0].pages[0]
+    browser = cl.user_session.get("browser")
+    page = await aget_current_page(browser)
     await cl.Message(
         author="Screenshot",
         content="Previous view...",
@@ -107,7 +124,7 @@ async def main(message: cl.Message):
                     name="Previous view",
                     content=await page.screenshot(),
                     display="side",
-                    size="large",
+                    size="medium",
                 ),],
         parent_id=message.id,
     ).send()
@@ -116,13 +133,13 @@ async def main(message: cl.Message):
     )
     await cl.Message(content=res, actions=actions).send()
     await cl.Message(
-        author="Screenshot",
-        content="New view...",
-        elements=[cl.Image(
-                    name="Current view",
-                    content=await page.screenshot(),
-                    display="side",
-                    size="large",
-                ),],
-        parent_id=message.id,
+            author="Screenshot",
+            content="New view...",
+            elements=[cl.Image(
+                        name="Current view",
+                        content=await page.screenshot(),
+                        display="inline",
+                        size="medium",
+                    ),],
+            parent_id=message.id,
     ).send()
