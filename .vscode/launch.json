@@ -21,5 +21,15 @@
             "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/langchain_ui_assistant",
             "justMyCode": false
         },
+        {
+            "name": "Run GraphQL Assistant", 
+            "type": "python",
+            "request": "launch",
+            "module": "chainlit",
+            "console": "integratedTerminal",
+            "args": ["run", "app.py", "-w", "-d"],
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/graphql_assistant",
+            "justMyCode": false
+        }
     ]
 }
