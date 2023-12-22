@@ -4,17 +4,17 @@ import os
 import chainlit as cl
 from chainlit.input_widget import TextInput
 from dotenv import load_dotenv
-import graphql
 from langchain.agents import AgentExecutor
 from langchain.agents.agent_toolkits import create_conversational_retrieval_agent
 from langchain.chat_models import ChatOpenAI
-from langchain.tools import Tool
 from langchain.tools.retriever import create_retriever_tool
 from langchain.vectorstores.faiss import FAISS
 from langchain_community.utilities.graphql import GraphQLAPIWrapper
 from langchain_core.vectorstores import VectorStore
 
-from graphql_execute_chain import chain as gql_execute_chain, ToolInputSchema
+from ai_assisted_test_repo.tools.test_management.fetch_test import test_retriever_tool
+from ai_assisted_test_repo.tools.test_management.save_test import save_test_tool
+from graphql_execute_chain import chain as gql_execute_chain, graphql_execute_tool
 from database_vector import cached_embedder
 from introspection import get_introspection_texts, aintrospect
 
@@ -80,13 +80,9 @@ async def start():
             """Searches and returns relevant information from the GraphQL schema.
             Useful for finding the correct query to use, and searching the GraphQL"""
         ),
-        Tool(
-            name="GraphQLExecute",
-            func=gql_execute_chain.invoke,
-            description="Useful tool for executing graphql queries, input should be the users original request.",
-            args_schema=ToolInputSchema,
-            handle_tool_error=graphql.error.graphql_error.GraphQLError
-        )
+        graphql_execute_tool,
+        save_test_tool,
+        test_retriever_tool
     ]
     # endregion
 

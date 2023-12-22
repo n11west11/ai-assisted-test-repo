@@ -1,9 +1,9 @@
 from __future__ import annotations
+
 import json
-
 import os
-from typing import Dict, Any
 
+import graphql
 from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
 from langchain_community.tools.graphql.tool import BaseGraphQLTool
@@ -13,6 +13,7 @@ from langchain_core.callbacks import StdOutCallbackHandler
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, ConfigurableField
+from langchain_core.tools import Tool
 from pydantic.v1 import BaseModel, Field, validator
 
 from ai_assisted_test_repo.cookbooks.graphql_assistant.database_vector import cached_embedder
@@ -118,4 +119,11 @@ chain = (
     verbose=True,
 )
 
+graphql_execute_tool = Tool(
+    name="GraphQLExecute",
+    func=chain.invoke,
+    description="Useful tool for executing graphql queries, input should be the users original request.",
+    args_schema=ToolInputSchema,
+    handle_tool_error=graphql.error.graphql_error.GraphQLError
+)
 # chain.with_config(callbacks=[StdOutCallbackHandler()]).invoke("Run a query on capsules for me please")
