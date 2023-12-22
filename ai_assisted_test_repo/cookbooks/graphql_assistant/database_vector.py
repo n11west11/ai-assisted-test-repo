@@ -12,9 +12,9 @@ OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 MONGO_URI = os.environ["MONGO_URI"]
 DB_NAME = os.environ["MONGO_DATABASE_NAME"]
 COLLECTION_NAME = os.environ["COLLECTION_NAME"]
-client = MongoClient(MONGO_URI)
-db = client[DB_NAME]
-MONGODB_COLLECTION = db[COLLECTION_NAME]
+# client = MongoClient(MONGO_URI)
+# db = client[DB_NAME]
+# MONGODB_COLLECTION = db[COLLECTION_NAME]
 
 # loader = MongodbLoader(
 #     connection_string=MONGO_URI,
