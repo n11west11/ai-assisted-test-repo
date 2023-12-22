@@ -1,15 +1,19 @@
 from __future__ import annotations
+import json
 
 import os
+from typing import Dict, Any
 
 from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
 from langchain_community.tools.graphql.tool import BaseGraphQLTool
 from langchain_community.utilities.graphql import GraphQLAPIWrapper
 from langchain_community.vectorstores.faiss import FAISS
+from langchain_core.callbacks import StdOutCallbackHandler
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableParallel, RunnablePassthrough
+from langchain_core.runnables import RunnableParallel, RunnablePassthrough, ConfigurableField
+from pydantic.v1 import BaseModel, Field, validator
 
 from ai_assisted_test_repo.cookbooks.graphql_assistant.database_vector import cached_embedder
 from ai_assisted_test_repo.cookbooks.graphql_assistant.introspection import introspect, get_introspection_texts
@@ -18,6 +22,17 @@ load_dotenv()
 GRAPHQL_DEFAULT_ENDPOINT = os.getenv("GRAPHQL_DEFAULT_ENDPOINT")
 
 llm = ChatOpenAI(temperature=0, streaming=True, model_name="gpt-3.5-turbo")
+llm_big = ChatOpenAI(temperature=0, streaming=True, model_name="gpt-4")
+
+
+class ToolInputSchema(BaseModel):
+    request: str = Field(description="The users original request")
+
+    @validator("request", allow_reuse=True)
+    def validate_query(cls, value):
+        print("validate_query", value)
+        return json.dumps(value)
+
 
 # region query_builder_prompts
 query_builder_text = """Create a GraphQL query using the following information that attempts to answer the question. 
@@ -32,10 +47,12 @@ Request:
 
 query_builder_text_with_examples = """Create a GraphQL query using the following information that attempts to answer 
 the question. 
+
 Output to this tool is a detailed and correct GraphQL query:
 
 Working Query Examples: 
 {examples}
+
 Introspection Data: 
 {introspection}
 
@@ -75,10 +92,17 @@ setup_and_retrieval = RunnableParallel(
 )
 
 wrapper = GraphQLAPIWrapper(graphql_endpoint=GRAPHQL_DEFAULT_ENDPOINT)
-graphql_tool = BaseGraphQLTool(graphql_wrapper=wrapper)
+
+graphql_tool = BaseGraphQLTool(graphql_wrapper=wrapper).configurable_fields(
+    graphql_wrapper=ConfigurableField(
+        id="graphql_wrapper",
+        name="GraphQL Wrapper",
+        description="Wrapper for the GraphQL API",
+    )
+)
 
 chain = (
-        {"request": lambda x: x["request"]} |
+        {"request": lambda text: json.dumps(text)} |
         {
             "introspection": introspection_db.as_retriever(),
             "request": RunnablePassthrough()
@@ -89,10 +113,9 @@ chain = (
         graphql_tool |
         llm |
         StrOutputParser()
+).with_config(
+    callbacks=[StdOutCallbackHandler()],
+    verbose=True,
 )
 
-# print(chain.invoke("Run a query on capsules for me please"))
-
-# agent_executor = AgentExecutor(agent=chain, tools=[graphql_tool], verbose=True, return_intermediate_steps=True)
-
-# agent_executor.run({"question": "Run a query on cloud cohort list please"})
+# chain.with_config(callbacks=[StdOutCallbackHandler()]).invoke("Run a query on capsules for me please")
