@@ -20,6 +20,8 @@ gql = "^3.4.1" # graphql
 motor = "^3.3.2" # needed for mongodb
 faiss-cpu = "^1.7.4"
 requests-toolbelt = "^1.0.0"
+unstructured = "^0.11.6"
+libmagic = "^1.0"
 
 [tool.poetry.group.dev.dependencies]
 setuptools = "^69.0.2"

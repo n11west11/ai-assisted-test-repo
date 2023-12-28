@@ -56,13 +56,11 @@ async def start():
                 id="endpoint",
                 label="GraphQL endpoint",
                 initial=graphql_endpoint,
-                initial_index=0,
             ),
             TextInput(
                 id="headers",
                 label="GraphQL headers",
                 initial="{}",
-                initial_index=0,
             )
         ]
     ).send()
