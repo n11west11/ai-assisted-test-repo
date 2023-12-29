@@ -2,22 +2,23 @@ from __future__ import annotations
 
 import json
 import os
+from calendar import c
+from re import search
 
 import graphql
 from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
 from langchain_community.tools.graphql.tool import BaseGraphQLTool
 from langchain_community.utilities.graphql import GraphQLAPIWrapper
-from langchain_community.vectorstores.faiss import FAISS
 from langchain_core.callbacks import StdOutCallbackHandler
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableParallel, RunnablePassthrough, ConfigurableField
+from langchain_core.runnables import (ConfigurableField, Runnable,
+                                      RunnableParallel, RunnablePassthrough)
 from langchain_core.tools import Tool
 from pydantic.v1 import BaseModel, Field, validator
 
-from ai_assisted_test_repo.cookbooks.graphql_assistant.database_vector import cached_embedder
-from ai_assisted_test_repo.cookbooks.graphql_assistant.introspection import introspect, get_introspection_texts
+from ai_assisted_test_repo.cookbooks.graphql_assistant.introspection import *
 
 load_dotenv()
 GRAPHQL_DEFAULT_ENDPOINT = os.getenv("GRAPHQL_DEFAULT_ENDPOINT")
@@ -30,7 +31,7 @@ class ToolInputSchema(BaseModel):
     request: str = Field(description="The users original request")
 
     @validator("request", allow_reuse=True)
-    def validate_query(cls, value):
+    def validate_query(cls, value):  #  noqa
         print("validate_query", value)
         return json.dumps(value)
 
@@ -64,15 +65,6 @@ Request:
 
 query_builder_prompt = ChatPromptTemplate.from_template(query_builder_text)
 
-# region introspection docs
-introspection_result = introspect(GRAPHQL_DEFAULT_ENDPOINT)
-introspection_texts = get_introspection_texts(introspection_result)
-if introspection_texts:
-    introspection_db = FAISS.from_documents(introspection_texts, cached_embedder)
-else:
-    raise Exception("No introspection texts")
-# endregion
-
 
 # original idea was
 # prompt | introspection | graphql_examples | query_builder | graphql_execute | llm | StrOutputParser()
@@ -86,11 +78,10 @@ else:
 # Parse the response into a string in human-readable form (StrOutputParser)
 
 setup_and_retrieval = RunnableParallel(
-    {
-        "introspection": introspection_db.as_retriever().with_config(run_name="introspection"),
-        "request": RunnablePassthrough()
-    }
+    introspection=introspection_db(GRAPHQL_DEFAULT_ENDPOINT).as_retriever(),
+    request=RunnablePassthrough()
 )
+
 
 wrapper = GraphQLAPIWrapper(graphql_endpoint=GRAPHQL_DEFAULT_ENDPOINT)
 
@@ -103,27 +94,38 @@ graphql_tool = BaseGraphQLTool(graphql_wrapper=wrapper).configurable_fields(
 )
 
 chain = (
-        {"request": lambda text: json.dumps(text)} |
-        {
-            "introspection": introspection_db.as_retriever(),
-            "request": RunnablePassthrough()
-        } |
-        query_builder_prompt |
-        llm |
-        StrOutputParser() |
-        graphql_tool |
-        llm |
-        StrOutputParser()
+    query_builder_prompt
+    | llm
+    | StrOutputParser()
+    | graphql_tool
+    | llm
+    | StrOutputParser()
 ).with_config(
     callbacks=[StdOutCallbackHandler()],
     verbose=True,
 )
 
-graphql_execute_tool = Tool(
-    name="GraphQLExecute",
-    func=chain.invoke,
-    description="Useful tool for executing graphql queries, input should be the users original request.",
-    args_schema=ToolInputSchema,
-    handle_tool_error=graphql.error.graphql_error.GraphQLError
-)
-# chain.with_config(callbacks=[StdOutCallbackHandler()]).invoke("Run a query on capsules for me please")
+def graphql_chain(endpoint: str=GRAPHQL_DEFAULT_ENDPOINT) -> Runnable:
+    setup_and_retrieval = RunnableParallel(
+        introspection=introspection_db(endpoint).as_retriever(),
+        request=RunnablePassthrough(),
+    )
+    graphql_wrapper = GraphQLAPIWrapper(graphql_endpoint=endpoint)
+    return setup_and_retrieval | chain.with_config(configurable={"graphql_wrapper": graphql_wrapper})
+
+
+def graphql_execute_tool(endpoint: str=GRAPHQL_DEFAULT_ENDPOINT) -> Tool:
+    return Tool(
+        name="GraphQLExecute",
+        func=graphql_chain(endpoint).invoke,
+        description="Useful tool for executing graphql queries, input should be the users original request.",
+        args_schema=ToolInputSchema,
+        handle_tool_error=graphql.error.graphql_error.GraphQLError,
+    )
+
+if __name__ == "__main__":
+    default_chain = graphql_chain()
+    print(default_chain.invoke("How many capsules are there?"))
+
+    star_wars_chain = graphql_chain(endpoint="https://swapi-graphql.netlify.app/.netlify/functions/index")
+    print(star_wars_chain.invoke("What is the name of the last movie in star wars?"))

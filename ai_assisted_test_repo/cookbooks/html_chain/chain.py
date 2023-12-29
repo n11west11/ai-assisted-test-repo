@@ -7,11 +7,9 @@ for the HTML elements. The chain is composed of the following steps:
 3. Run the prompt through the LLM
 4. Parse the output of the LLM
 """
-from re import split
-from tabnanny import verbose
 
-from langchain.document_loaders import AsyncHtmlLoader
 from langchain.chat_models import ChatOpenAI
+from langchain.document_loaders import AsyncHtmlLoader
 from langchain.text_splitter import Language, RecursiveCharacterTextSplitter
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_core.callbacks import StdOutCallbackHandler
@@ -20,7 +18,8 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import Runnable, RunnablePassthrough
 
-from ai_assisted_test_repo.cookbooks.html_chain.cached_embedder import cached_embedder
+from ai_assisted_test_repo.cookbooks.html_chain.cached_embedder import \
+    cached_embedder
 
 TEMPLATE = """
     Using the HTML determine a locator that can be used to perform the request or set of requests. 
