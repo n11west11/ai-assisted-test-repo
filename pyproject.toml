@@ -14,7 +14,7 @@ pymongo = "^4.6.1"
 chainlit = "^0.7.700"
 playwright = "^1.40.0"
 beautifulsoup4 = "^4.12.2"
-langchain = "^0.0.350"
+langchain = "^0.0.353"
 lxml = "^4.9.3" # for beautifulsoup4
 gql = "^3.4.1" # graphql
 motor = "^3.3.2" # needed for mongodb
@@ -22,6 +22,7 @@ faiss-cpu = "^1.7.4"
 requests-toolbelt = "^1.0.0"
 unstructured = "^0.11.6"
 libmagic = "^1.0"
+pydantic = "1.10.13" # higher versions cause from pydantic.v1 import BaseModel, Field, validator import issues. Last tried on 2.5.4
 
 [tool.poetry.group.dev.dependencies]
 setuptools = "^69.0.2"

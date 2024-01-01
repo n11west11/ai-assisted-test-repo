@@ -3,12 +3,12 @@ from typing import Any, Dict
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 from graphql import build_client_schema, get_introspection_query, print_schema
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores.faiss import FAISS
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore
 from pydantic import BaseModel, Field
-from database_vector import cached_embedder
+from ai_assisted_test_repo.cookbooks.graphql_assistant.embeddings import cached_embedder
 
 
 class GraphQLBaseParameters(BaseModel):
@@ -49,13 +49,13 @@ async def aintrospect(url: str, headers=None):
 
 
 def get_introspection_texts(query: str) -> list[Document]:
-    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     documents = text_splitter.create_documents([query])
     return documents
 
 
 async def aget_introspection_texts(query: str) -> list[Document]:
-    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     documents = text_splitter.create_documents([query])
     return documents
 

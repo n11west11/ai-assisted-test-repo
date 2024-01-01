@@ -1,8 +1,18 @@
 {
-    "pylint.args": ["--disable=C0111", "--max-line-length=120"], 
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter"
-      }, 
-    "python.analysis.stubPath": "",
-    "python.analysis.indexing": true,
+  "python.analysis.indexing": true,
+  "python.analysis.packageIndexDepths": [
+    { "name": "", "depth": 20, "includeAllSymbols": true }
+  ],
+  "python.analysis.autoImportCompletions": true, 
+  "python.analysis.autoSearchPaths": true, 
+  "python.analysis.extraPaths": [  
+      "${workspaceFolder}/.venv/lib/python3.11/site-packages",
+      ".venv"
+    ],  
+  "pylint.args": ["--disable=C0111", "--max-line-length=120"], 
+  "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter"
+    }, 
+
+  
 }

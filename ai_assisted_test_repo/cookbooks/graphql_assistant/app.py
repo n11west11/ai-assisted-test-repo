@@ -4,19 +4,23 @@ import os
 import chainlit as cl
 from chainlit.input_widget import TextInput
 from dotenv import load_dotenv
+# from ai_assisted_test_repo.tools.test_management.fetch_test import test_retriever_tool
+# from ai_assisted_test_repo.tools.test_management.save_test import save_test_tool
+from graphql_execute_chain import GraphQLExecuteTool
+from introspection import aintrospect, aintrospection_db
 from langchain.agents import AgentExecutor
-from langchain.agents.agent_toolkits import create_conversational_retrieval_agent
 from langchain.chat_models import ChatOpenAI
+from langchain.globals import set_debug
 from langchain.tools.retriever import create_retriever_tool
 from langchain_community.utilities.graphql import GraphQLAPIWrapper
 
-# from ai_assisted_test_repo.tools.test_management.fetch_test import test_retriever_tool
-# from ai_assisted_test_repo.tools.test_management.save_test import save_test_tool
-from graphql_execute_chain import graphql_chain, graphql_execute_tool
-from introspection import get_introspection_texts, aintrospect, aintrospection_db
+from ai_assisted_test_repo.cookbooks.graphql_assistant.create_conversational_retrieval_agent import \
+    create_conversational_retrieval_agent
 
 load_dotenv()
 graphql_endpoint = os.getenv("GRAPHQL_DEFAULT_ENDPOINT")
+
+set_debug(True)
 
 
 @cl.on_settings_update
@@ -34,9 +38,11 @@ async def setup_agent(settings):
         custom_headers=json.loads(settings["headers"]),
         graphql_endpoint=settings["endpoint"],
     )
-    agent.tools[1].func = graphql_chain(settings["endpoint"]).with_config(
-        configurable={"graphql_wrapper": wrapper}, introspection=db
-    ).invoke
+    agent.tools[1] = GraphQLExecuteTool(
+        graphql_wrapper=wrapper,
+        endpoint=settings["endpoint"],
+        handle_tool_error=True,
+    )
     cl.user_session.set("agent", agent)
 
 
@@ -60,18 +66,26 @@ async def start():
     # endregion
     # region Main Bot Setup
     llm = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo-0613", streaming=True)
-    db = await aintrospection_db(graphql_endpoint)
+    db = await aintrospection_db(settings["endpoint"])
     # endregion
+
+    graphql_wrapper = GraphQLAPIWrapper(
+        graphql_endpoint=settings["endpoint"],
+    )
 
     # region Tools
     tools = [
         create_retriever_tool(
-            db.as_retriever(),
+            db.as_retriever(search_kwargs={"k": 7}),
             "GraphQLIntrospect",
             """Searches and returns relevant information from the GraphQL schema.
-            Useful for finding the correct query to use, and searching the GraphQL""",
+            Useful for finding general information about the GraphQL schema, not needed for the GraphQLExecute tool""",
         ),
-        graphql_execute_tool(settings["endpoint"]),
+        GraphQLExecuteTool(
+            graphql_wrapper=graphql_wrapper,
+            endpoint=settings["endpoint"],
+            handle_tool_error=True,
+        )
         # save_test_tool,
         # test_retriever_tool,
     ]
@@ -82,9 +96,8 @@ async def start():
         llm,
         tools,
         verbose=True,
-        remember_intermediate_steps=False,
-        handle_parsing_errors=True,
         max_token_limit=5000,
+        handle_parsing_errors=True,
     )
     cl.user_session.set("agent", agent)
     # endregion
