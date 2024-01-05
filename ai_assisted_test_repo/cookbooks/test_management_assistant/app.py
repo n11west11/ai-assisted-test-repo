@@ -57,6 +57,11 @@ async def start():
             )
         ]
     ).send()
+    loader = MongodbLoader(MONGO_URI, DB_NAME, settings["collection"])
+    docs = await loader.aload()
+    db = await FAISS.afrom_documents(docs, cached_embedder)
+    for collection in collection_list:
+        loader = MongodbLoader(MONGO_URI, DB_NAME, collection)
     db = await FAISS.afrom_documents([], cached_embedder)
     for collection in collection_list:
         loader = MongodbLoader(MONGO_URI, DB_NAME, settings["collection"])
