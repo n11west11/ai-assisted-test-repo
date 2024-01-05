@@ -17,9 +17,7 @@ from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import Runnable, RunnablePassthrough
-
-from ai_assisted_test_repo.cookbooks.html_chain.cached_embedder import \
-    cached_embedder
+from ai_assisted_test_repo.tools.embeddings import cached_embedder
 
 TEMPLATE = """
     Using the HTML determine a locator that can be used to perform the request or set of requests. 

@@ -71,6 +71,7 @@ async def start():
 
     graphql_wrapper = GraphQLAPIWrapper(
         graphql_endpoint=settings["endpoint"],
+        custom_headers=json.loads(settings["headers"])
     )
 
     # region Tools
@@ -84,6 +85,7 @@ async def start():
         GraphQLExecuteTool(
             graphql_wrapper=graphql_wrapper,
             endpoint=settings["endpoint"],
+            custom_headers=json.loads(settings["headers"]),
             handle_tool_error=True,
         )
         # save_test_tool,

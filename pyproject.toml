@@ -23,6 +23,8 @@ requests-toolbelt = "^1.0.0"
 unstructured = "^0.11.6"
 libmagic = "^1.0"
 pydantic = "1.10.13" # higher versions cause from pydantic.v1 import BaseModel, Field, validator import issues. Last tried on 2.5.4
+boto3 = "^1.34.11"
+gitpython = "^3.1.40"
 
 [tool.poetry.group.dev.dependencies]
 setuptools = "^69.0.2"

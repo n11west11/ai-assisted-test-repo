@@ -8,7 +8,7 @@ from langchain.vectorstores.faiss import FAISS
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore
 from pydantic import BaseModel, Field
-from ai_assisted_test_repo.cookbooks.graphql_assistant.embeddings import cached_embedder
+from ai_assisted_test_repo.tools.embeddings import cached_embedder
 
 
 class GraphQLBaseParameters(BaseModel):
