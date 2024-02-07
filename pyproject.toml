@@ -1,0 +1,44 @@
+[tool.poetry]
+name = "ai-assisted-test-repo"
+version = "0.1.0"
+description = "A repository utilizing ai to create/execute/test any application you can throw at it"
+authors = ["Nathan West"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+openai = "^1.3.9"
+tiktoken = "^0.5.2"
+pymongo = "^4.6.1"
+playwright = "^1.40.0"
+beautifulsoup4 = "^4.12.2"
+lxml = "^4.9.3" # for beautifulsoup4
+gql = "^3.4.1" # graphql
+motor = "^3.3.2" # needed for mongodb
+faiss-cpu = "^1.7.4"
+requests-toolbelt = "^1.0.0"
+unstructured = "^0.11.6"
+libmagic = "^1.0"
+pydantic = "1.10.13" # higher versions cause from pydantic.v1 import BaseModel, Field, validator import issues. Last tried on 2.5.4
+boto3 = "^1.34.11"
+gitpython = "^3.1.40"
+chainlit = "^1.0.200"
+langchain = "^0.1.4"
+langchain-openai = "^0.0.5"
+langgraph = "^0.0.20"
+atlassian-python-api = "^3.41.9"
+
+[tool.poetry.group.dev.dependencies]
+setuptools = "^69.0.2"
+# readmeai = "^0.4.79"
+pytest = "^7.4.4"
+
+
+
+[tool.poetry.group.test.dependencies]
+pytest-playwright = "^0.4.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
