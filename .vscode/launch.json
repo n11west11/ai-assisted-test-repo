@@ -1,0 +1,84 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run UI Assistant",
+            "type": "python",
+            "request": "launch",
+            "module": "chainlit",
+            "console": "integratedTerminal",
+            "args": ["run", "app.py", "-w", "-d"],
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/ui_assistant",
+            "justMyCode": false
+        }, 
+        {
+            "name": "Run UI LangChain Assistant",
+            "type": "python",
+            "request": "launch",
+            "module": "chainlit",
+            "console": "integratedTerminal",
+            "args": ["run", "app.py", "-w", "-d"],
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/langchain_ui_assistant",
+            "justMyCode": false
+        },
+        {
+            "name": "Run GraphQL Assistant", 
+            "type": "python",
+            "request": "launch",
+            "module": "chainlit",
+            "console": "integratedTerminal",
+            "args": ["run", "app.py", "-w", "-d"],
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/graphql_assistant",
+            "justMyCode": false
+        },
+        {
+            "name": "Run AWS SSM Assistant", 
+            "type": "python",
+            "request": "launch",
+            "module": "chainlit",
+            "console": "integratedTerminal",
+            "args": ["run", "app.py", "-w", "-d"],
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/aws_ssm_assistant",
+            "justMyCode": false
+        },
+        {
+            "name": "Run API Assistant", 
+            "type": "python",
+            "request": "launch",
+            "module": "chainlit",
+            "console": "integratedTerminal",
+            "args": ["run", "app.py", "-w", "-d"],
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/api_assistant",
+            "justMyCode": false
+        },
+        {
+            "name": "Run Test Management Assistant", 
+            "type": "python",
+            "request": "launch",
+            "module": "chainlit",
+            "console": "integratedTerminal",
+            "args": ["run", "app.py", "-w", "-d"],
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/test_management_assistant",
+            "justMyCode": false
+        }, 
+        {
+            "name": "Single Agent UI", 
+            "type": "python",
+            "request": "launch",
+            "module": "chainlit",
+            "console": "integratedTerminal",
+            "args": ["run", "app.py", "-w", "-d"],
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/single_agent_ui",
+            "justMyCode": false
+        }, 
+        {
+            "name": "Multi Agent UI",
+            "type": "python",
+            "request": "launch",
+            "module": "chainlit",
+            "console": "integratedTerminal",
+            "args": ["run", "app.py", "-w", "-d"],
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/multi_agent_ui"        }
+
+    ]
+}
