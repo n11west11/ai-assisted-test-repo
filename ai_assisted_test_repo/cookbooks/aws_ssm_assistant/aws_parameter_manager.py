@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, constr
 # from data import path as data_path
 
 class GetParametersByPathInput(BaseModel):
-    path: constr(regex=r'^/QA/(default|development|staging|production)$') = Field(..., description="Must always start with /QA/ and then default, development, staging, or production.")
+    path: constr(regex=r'^/(default|development|staging|production)$') = Field(..., description="The path to search for parameters.")
     recursive: bool = Field(True, description="Whether to recursively search for parameters under the given path.")
     
 

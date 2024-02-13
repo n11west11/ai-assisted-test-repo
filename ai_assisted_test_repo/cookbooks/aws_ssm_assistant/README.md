@@ -5,7 +5,7 @@ Tags: [chatgpt, langchain, plugins]
 
 This cookbook demonstrates how to use the AWS SSM Assistant plugin to interact with AWS SSM.
 
-Ever wonder whats in the QA teams SSM parameter store? 
+Ever wonder whats in the teams SSM parameter store? 
 Ever struggle creating the cli commands to navigate corretly?
 
 Now you can ask ChatGPT!

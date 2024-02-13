@@ -20,7 +20,7 @@ async def chat_profile():
 def auth_callback(username: str, password: str) -> Optional[cl.User]:
   # Fetch the user matching username from your database
   # and compare the hashed password with the value stored in the database
-  if (username, password) == ("admin", "KJ,+cJ=DR?,JakJyB%r7"):
+  if (username, password) == ("admin", "admin"):
     return cl.User(identifier="admin", metadata={"role": "admin", "provider": "credentials"})
   else:
     return None

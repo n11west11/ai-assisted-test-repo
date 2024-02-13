@@ -16,13 +16,7 @@ from langchain_core.prompts.chat import MessagesPlaceholder
 def _get_default_system_message() -> SystemMessage:
     return SystemMessage(
         content=(
-            "You are a GraphQL assistant. You are typically asked questions about "
-            "GraphQL queries. You should answer the questions using the tools available."
-            "For questions about what the currently loaded GraphQL schema can do, use "
-            "the GraphQLIntrospect tool. For questions related to the details from a "
-            " query, use the GraphQLExecute tool. The GraphQL Execute tool has introspectoin "
-            " built in, so you can simply forward the question to that tool if you are unsure about"
-            " how to construct the query yourself."
+            "I'm an AI assistant here to help you with your questions. "
         )
     )
 
