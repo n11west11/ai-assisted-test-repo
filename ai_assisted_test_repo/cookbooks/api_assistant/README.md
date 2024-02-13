@@ -1,22 +1,11 @@
 Title: ChatGPT plugins & LangChain
 Tags: [chatgpt, langchain, plugins]
 
-# AWS SSM Assistant
+# API Assistant
 
-This cookbook demonstrates how to use the AWS SSM Assistant plugin to interact with AWS SSM.
+This is a simple API assistant that uses the Langchain API tool to interact with the api. 
 
-Ever wonder whats in the QA teams SSM parameter store? 
-Ever struggle creating the cli commands to navigate corretly?
+# Usage
 
-Now you can ask ChatGPT!
-
-Your AWS credentials are stored in the `~/.aws/credentials` file.
-
-This cookbook assumes you're running this locally. 
-Additionally you may be concerned that this is exposing secrtets to an API. 
-
-Fear not! The AI can only interact with the AWS SSM API with decryption disabled at all times. All values are still encrypted. 
-
-To run the example, follow the instructions of the [main readme](/README.md).
-
-![Rendering](./rendering.png)
+Upload a OpenAPI v3.0 json file to the API Assistant and it will generate load the api tool for you to use in Chainlit. 
+You may put a default api in default_api.json and it will load that api on startup.

@@ -39,7 +39,7 @@
 
 ## 📍 Overview
 
-The AI-Assisted-Test-Repo is a project aimed at improving UI testing through the integration of artificial intelligence. The repository contains a Python-based UI testing assistant named Qubert. This assistant uses OpenAI’s APIs and Python Playwright mechanisms to process instructions and deliver efficient UI testing solutions. Qubert is versatile and can interpret code, retrieve data, and make function calls, all within a browser context. By safeguarding environment variables, authorization is always in place. This project provides developers consistent, robust, and smart UI testing automation, enhancing production quality and reducing manual efforts.
+The AI-Assisted-Test-Repo is a project aimed at improving testing through the integration of artificial intelligence. The repository contains a Python-based testing assistant named Qubert. This assistant uses OpenAI’s APIs, GraphQL, and Python Playwright mechanisms to process instructions and deliver efficient testing solutions. Qubert is versatile and can interpret code, retrieve data, and make function calls. By safeguarding environment variables, authorization is always in place. This project provides developers consistent, robust, and smart testing automation, enhancing production quality and reducing manual efforts.
 
 ---
 
@@ -66,10 +66,10 @@ The AI-Assisted-Test-Repo is a project aimed at improving UI testing through the
 
 ```sh
 └── ai-assisted-test-repo/
-    ├── ai-assisted-test-repo.code-workspace
     ├── ai_assisted_test_repo/
     │   ├── cookbooks/
-    │   │   └── ui_assistant/
+    │   │   └── ...
+    ├── tools
     ├── poetry.lock
     └── pyproject.toml
 
@@ -137,18 +137,22 @@ cd ai-assisted-test-repo
 
 3. Install the dependencies:
 ```sh
-► INSERT-TEXT
+► poetry install
 ```
 
 ### 🤖 Running ai-assisted-test-repo
 
+To run a cookbook cd into the location of the cookbook and run the app.py file with the -w and -d flags.
+
 ```sh
-► INSERT-TEXT
+► run app.py -w -d 
 ```
 
 ### 🧪 Tests
+Tests are build with pytest in mind
+
 ```sh
-► INSERT-TEXT
+► pytest tests/   
 ```
 
 ---
@@ -156,8 +160,8 @@ cd ai-assisted-test-repo
 
 ## 🛣 Project Roadmap
 
-> - [X] `ℹ️  Task 1: Implement X`
-> - [ ] `ℹ️  Task 2: Implement Y`
+> - [X] `ℹ️  Task 1: Create FastAPI of Tools folder`
+> - [ ] `ℹ️  Task 2: Implement custom GPTs using FastAPI and OpenAI`
 > - [ ] `ℹ️ ...`
 
 

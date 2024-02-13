@@ -16,7 +16,6 @@ def mongo_client():
     return collection
 
 @pytest.mark.qbert
-@pytest.mark.tags("E4S")
 def test_aware_agent(request, page, mongo_client):
     # first get tags
     tags = request.node.get_closest_marker("tags")

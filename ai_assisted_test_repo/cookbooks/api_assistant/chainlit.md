@@ -1,26 +1,8 @@
-# Project Name
+# API Assistant
 
-A brief description of the project.
+This is a simple API assistant that uses the Langchain API tool to interact with the api. 
 
-## Table of Contents
+# Usage
 
-- [Installation](#installation)
-- [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Installation
-
-Instructions on how to install the project and its dependencies.
-
-## Usage
-
-Instructions on how to use the project. Include code examples and explanations if necessary.
-
-## Contributing
-
-Guidelines for contributing to the project. Include information on how to submit bug reports, feature requests, and pull requests.
-
-## License
-
-Information about the project's license. Specify the license type and provide a link to the license file if applicable.
+Upload a OpenAPI v3.0 json file to the API Assistant and it will generate load the api tool for you to use in Chainlit. 
+You may put a default api in default_api.json and it will load that api on startup.

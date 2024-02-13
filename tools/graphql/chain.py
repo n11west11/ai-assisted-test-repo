@@ -52,6 +52,12 @@ Output to this tool is a detailed and correct GraphQL query:
 Introspection Data: 
 {introspection}
 
+Available Queries:
+{queries}
+
+Available Mutations:
+{mutations}
+
 Request: 
 {request}
 
@@ -63,6 +69,14 @@ query_builder_prompt = ChatPromptTemplate.from_template(query_builder_text)
 
 # original idea was
 # prompt | introspection | graphql_examples | query_builder | graphql_execute | llm | StrOutputParser()
+# So the logic is as follows;
+# Given a command to run a graphql query (prompt)
+# Introspect the graphql endpoint to get the schema (introspection_db)
+# Use the info in the schema to find pre-made examples of queries that can be run (graphql_examples)
+# Use the prompt, introspection, adn examples to build a query (query_builder)
+# Execute the query on the endpoint (graphql_execute)
+# Use the results to generate a response (llm)
+# Parse the response into a string in human-readable form (StrOutputParser)
 
 
 wrapper = GraphQLAPIWrapper(graphql_endpoint=GRAPHQL_DEFAULT_ENDPOINT)
@@ -97,44 +111,6 @@ def graphql_chain(
         | StrOutputParser()
     ).with_config(configurable={"graphql_wrapper": graphql_wrapper})
     return chain
-
-
-class GraphQLExecuteTool(BaseTool):
-    endpoint: str = Field(
-        default=GRAPHQL_DEFAULT_ENDPOINT,
-        description="The endpoint to use for the GraphQL API",
-    )
-    custom_headers: Dict[str, str] | None = Field(
-        default={},
-        description="Custom headers to use for the GraphQL API",
-    )
-    name = "GraphQLExecute"
-    description: str = """Useful for finding out information that exists in a GraphQL API. Input is a question, output is a answer."""
-    args_schema: Type[BaseModel] = ToolInputSchema
-
-    def _run(
-        self, query: str, run_manager: Optional[CallbackManagerForToolRun] = None
-    ) -> str:
-        """Use the tool."""
-        try:
-            graphql_chain: Runnable = graphql_chain(
-                endpoint=self.endpoint, custom_headers=self.custom_headers
-            )
-            return graphql_chain.with_config(run_manager=run_manager).invoke(query)
-        except Exception as e:
-            raise ToolException(f"Error running GraphQLExecute tool: {e}")
-
-    async def _arun(
-        self, query: str, run_manager: Optional[AsyncCallbackManagerForToolRun] = None
-    ) -> str:
-        """Use the tool asynchronously."""
-        try:
-            chain = graphql_chain(
-                endpoint=self.endpoint, custom_headers=self.custom_headers
-            )
-            return await chain.with_retry().ainvoke(query)
-        except Exception as e:
-            raise ToolException(f"Error running GraphQLExecute tool: {e}")
 
 
 if __name__ == "__main__":

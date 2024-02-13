@@ -31,7 +31,6 @@ atlassian-python-api = "^3.41.9"
 
 [tool.poetry.group.dev.dependencies]
 setuptools = "^69.0.2"
-# readmeai = "^0.4.79"
 pytest = "^7.4.4"
 
 

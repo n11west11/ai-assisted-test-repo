@@ -2,26 +2,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run UI Assistant",
-            "type": "python",
-            "request": "launch",
-            "module": "chainlit",
-            "console": "integratedTerminal",
-            "args": ["run", "app.py", "-w", "-d"],
-            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/ui_assistant",
-            "justMyCode": false
-        }, 
-        {
-            "name": "Run UI LangChain Assistant",
-            "type": "python",
-            "request": "launch",
-            "module": "chainlit",
-            "console": "integratedTerminal",
-            "args": ["run", "app.py", "-w", "-d"],
-            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/langchain_ui_assistant",
-            "justMyCode": false
-        },
-        {
             "name": "Run GraphQL Assistant", 
             "type": "python",
             "request": "launch",
@@ -73,12 +53,22 @@
         }, 
         {
             "name": "Multi Agent UI",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "chainlit",
             "console": "integratedTerminal",
             "args": ["run", "app.py", "-w", "-d"],
-            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/multi_agent_ui"        }
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/multi_agent_ui"        
+        }, 
+        {
+            "name": "LangGraph GraphQL", 
+            "type": "debugpy",
+            "request": "launch",
+            "module": "chainlit",
+            "console": "integratedTerminal",
+            "args": ["run", "app.py", "-w", "-d"],
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/langgraph_graphql",
+        }
 
     ]
 }

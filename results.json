@@ -1,0 +1,49 @@
+{
+    "page_description": "AcademyBugs.com - Find Bugs Page",
+    "interactable_elements": [
+        {
+            "locators": "a.skip-link.screen-reader-text",
+            "description": "Skip to content link"
+        },
+        {
+            "locators": "header.sq-site-header",
+            "description": "Site header"
+        },
+        {
+            "locators": "div#sq-site-branding h3.sq-site-title a",
+            "description": "Site title link"
+        },
+        {
+            "locators": "a.sq-toggle-nav",
+            "description": "Toggle navigation button"
+        },
+        {
+            "locators": "nav.sq-main-navigation",
+            "description": "Main navigation menu"
+        },
+        {
+            "locators": "ul#menu-primary-menu",
+            "description": "Primary menu"
+        },
+        {
+            "locators": "input#wp_easycart_cart_id",
+            "description": "Cart ID input field"
+        },
+        {
+            "locators": "section#ec_product_page",
+            "description": "Product page section"
+        },
+        {
+            "locators": "ul#ec_store_product_list",
+            "description": "List of products"
+        },
+        {
+            "locators": "footer.sq-site-footer",
+            "description": "Site footer"
+        },
+        {
+            "locators": "div.sfm-floating-menu",
+            "description": "Floating menu"
+        }
+    ]
+}

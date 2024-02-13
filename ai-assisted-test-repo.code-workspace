@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"name": "ai-assisted-test-repo",
+			"path": "."
+		},
+		{
+			"name": "cookbook",
+			"path": "../cookbook"
+		}
+	],
+	"settings": {
+		"search.useIgnoreFiles": false
+	}
+}

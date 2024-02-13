@@ -1,5 +1,6 @@
 import functools
 import json
+from json import tool
 from typing import Any, Dict, List, Sequence, TypedDict, Union, cast
 
 import chainlit as cl
@@ -24,7 +25,7 @@ from langchain_core.messages import (
     SystemMessage,
 )
 from langchain_core.runnables import RunnablePassthrough
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolExecutor
 from playwright.async_api import async_playwright
@@ -300,6 +301,7 @@ class UIAppHandler(BaseCallbackHandler):
 
 
 def set_test_executor_node(async_browser):
+    tools = cl.user_session.get("tools", [])
     test_executioner_tools = test_execution_toolkit.get_tools(
         async_browser=async_browser
     )
@@ -315,8 +317,10 @@ def set_test_executor_node(async_browser):
         agent_node, agent=test_executioner_agent, name="Test Executor"
     )
     cl.user_session.set("test_executioner_node", test_executioner_node)
+    cl.user_session.set("tools", tools + test_executioner_tools)
 
 def set_test_documentor_node():
+    tools = cl.user_session.get("tools", [])
     test_documentor_tools = test_documentation_toolkit.get_tools()
     test_documentor_agent = create_agent(
         llm,
@@ -329,6 +333,7 @@ def set_test_documentor_node():
         agent_node, agent=test_documentor_agent, name="Test Documentor"
     )
     cl.user_session.set("test_documentor_node", test_documentor_node)
+    cl.user_session.set("tools", tools + test_documentor_tools)
 
 def set_observation_node():
     observation_agent = create_observation_agent(
