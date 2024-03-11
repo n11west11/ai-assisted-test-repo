@@ -21,16 +21,14 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import Runnable, RunnablePassthrough
 
 from tools.embeddings import cached_embedder
-from tools.ui import condense_html
+from tools.ui import manage_html
 
-TEMPLATE = TEMPLATE = """
-    Please provide a page object model for the following HTML:
+TEMPLATE = """
+    Given the following HTML, and plan, please provide a page object model that a test engineer can use to interact with the page.
+    The page object model should include the html, and be a json object that is a dictionary of the locators for the input fields and buttons. 
+    Assume that the test engineer is using Python, and playwright.
 
-    The page should include a summary of the HTML, the input fields, the buttons, and any other elements that are relevant to understanding the HTML.
-    Any element that can be interacted with should include a locator that can be used by playwright. 
-
-    HTML
-    {html}
+    If the fields are not present, please provide a message that the fields are not present.
 
     Input Fields:
     {inputs}
@@ -38,10 +36,35 @@ TEMPLATE = TEMPLATE = """
     Buttons:
     {buttons}
 
+    Links:
+    {links}
+
+    inputs:
+    {inputs}
+
+    select:
+    {select}
+
+    textarea:
+    {textarea}
+
+    form:
+    {form}
+
+    iframe:
+    {iframe}
+
+    video:
+    {video}
+
+
+
+    
+
 """
 
 
-llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0125")
+llm = ChatOpenAI(temperature=0, model="gpt-4")
 
 
 def split_html(html: str) -> list[Document]:
@@ -51,61 +74,73 @@ def split_html(html: str) -> list[Document]:
     :return: A list of documents that are the chunks of the html
     """
 
-    condensed_html = condense_html.condense_html(html)
+    condensed_html = manage_html.condense_html(html)
 
     html_splitter = RecursiveCharacterTextSplitter.from_language(
-        language=Language.HTML, chunk_size=200, chunk_overlap=50
+        language=Language.HTML, chunk_size=1000, chunk_overlap=50
     )
     html_docs = html_splitter.create_documents([str(condensed_html)])
     return html_docs
 
 
-def get_buttons(html: str) -> str:
+def html_vector_store(html: str) -> FAISS:
     """
-    This function is used to get the buttons from the html
-    :param html: The html string that will be used to get the buttons
-    :return: A list of buttons that are in the html
+    This function is used to produce a FAISS vector store from the html
+    :param html: The html string that will be used to produce the vector store
+    :return: A FAISS vector store that will be used to produce the locators
     """
-    soup = BeautifulSoup(html, "html.parser")
-    buttons = soup.find_all("button")
-    # return a string of the buttons
-    return "\n".join([str(button) for button in buttons])
-    
+    html_docs = split_html(html)
+    vector_store = FAISS.from_documents(html_docs, cached_embedder)
+    return vector_store
 
 
-def get_inputs(html: str) -> str:
+def get_html(tag: str, html: str) -> str:
     """
     This function is used to get the inputs from the html
     :param html: The html string that will be used to get the inputs
     :return: A list of inputs that are in the html
     """
     soup = BeautifulSoup(html, "html.parser")
-    inputs = soup.find_all("input")
+    inputs = soup.find_all(tag)
     return "\n".join([str(input) for input in inputs])
 
 
-def playwright_chain(html: str) -> Runnable:
+def playwright_chain(html: str, url: str) -> Runnable:
     """
     This function is used to produce a playwright chain that
     will be used to produce the locators for the HTML elements
     :param html: The html string that will be used to produce the locators
     :return: A playwright chain that will be used to produce the locators
     """
-    condensed_html = condense_html.condense_html(html)
-    html_docs = split_html(condensed_html)
+    condensed_html = manage_html.condense_html(html)
 
-    buttons = get_buttons(html)
-    inputs = get_inputs(html)
+    buttons = get_html("button", condensed_html)
+    inputs = get_html("input", condensed_html)
+    links = get_html("a", condensed_html)
+    select = get_html("select", condensed_html)
+    textarea = get_html("textarea", condensed_html)
+    form = get_html("form", condensed_html)
+    iframe = get_html("iframe", condensed_html)
+    video = get_html("video", condensed_html)
 
-    us_vector_store = FAISS.from_documents(html_docs, cached_embedder)
+    prompt = PromptTemplate(input_variables=["request", "html"], template=TEMPLATE)
+    prompt.partial(url=url)
+    prompt = prompt.partial(
+        buttons=buttons,
+        inputs=inputs,
+        links=links,
+        select=select,
+        textarea=textarea,
+        form=form,
+        iframe=iframe,
+        video=video,
+    )
+
     playwright_chain = (
         {
             "request": RunnablePassthrough(),
-            "html": us_vector_store.as_retriever(
-                search_kwargs={"k": 15, "fetch_k": 60}
-            )
         }
-        | PromptTemplate(input_variables=["request", "html"], template=TEMPLATE).partial(buttons=buttons, inputs=inputs)
+        | prompt
         | llm
         | StrOutputParser()
     )

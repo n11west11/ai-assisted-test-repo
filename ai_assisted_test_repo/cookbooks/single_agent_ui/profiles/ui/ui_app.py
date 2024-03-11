@@ -4,8 +4,6 @@ from math import log
 import operator
 from json import tool
 from textwrap import indent
-from tkinter.filedialog import Open
-from turtle import up
 from typing import Annotated, Dict, List, Sequence, TypedDict, Union, cast, Any
 
 import chainlit as cl
@@ -30,17 +28,15 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolExecutor, create_agent_executor
 from playwright.async_api import async_playwright, Browser
-from sqlalchemy.orm import state
 from tools.test_management.fetch_test import loader as test_loader
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores.faiss import FAISS
 
 # TODO: remove all cookbok imports
 from tools.toolkits import default_toolkit
-from tools.ui.chain import playwright_chain
+from tools.ui.custom_chain import playwright_chain
 from tools.ui.fill_element import FillTool
 from tools.ui.get_elements import GetElementsTool
-from transformers import Agent
 
 set_debug(True)
 

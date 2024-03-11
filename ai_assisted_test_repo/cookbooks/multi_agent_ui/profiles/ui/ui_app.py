@@ -1,53 +1,49 @@
 import functools
+import html
 import json
-from json import tool
-from typing import Any, Dict, List, Sequence, TypedDict, Union, cast
+import operator
+from typing import Annotated, Any, Dict, List, Sequence, Tuple, TypedDict, Union, cast, final
 
 import chainlit as cl
-from langchain.agents import create_openai_tools_agent
-from langchain.agents.format_scratchpad.openai_tools import (
-    format_to_openai_tool_messages,
-)
+from dotenv import load_dotenv
+from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
+from langchain.chains.openai_functions import (
+    create_openai_fn_runnable,
+    create_structured_output_runnable,
+)
 from langchain.globals import set_debug
-from langchain.memory import ChatMessageHistory
+from langchain.memory import ChatMessageHistory, ConversationTokenBufferMemory
 from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.schema import AIMessage
 from langchain_community.tools.playwright.utils import aget_current_page
-from langchain_community.vectorstores.faiss import FAISS
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import BaseCallbackHandler
-from langchain_core.documents import Document
-from langchain_core.messages import (
-    BaseMessage,
-    HumanMessage,
-    SystemMessage,
-)
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.pydantic_v1 import BaseModel, Field
+from langchain_core.utils.function_calling import convert_to_openai_tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
-from langgraph.prebuilt import ToolExecutor
+from langgraph.prebuilt import ToolExecutor, create_agent_executor
 from playwright.async_api import async_playwright
+from pyee import executor
 
 from ai_assisted_test_repo.openai.num_tokens_from_messages import (
     num_tokens_from_messages,
+    num_tokens_from_string,
 )
 from tools.test_management.fetch_test import loader as test_loader
+from tools.toolkits import test_documentation_toolkit, test_execution_toolkit
+from tools.ui.basic_chain import html_vector_store, playwright_chain as basic_chain, split_html
+from tools.ui.manage_html import condense_html, get_page_content
 
-# TODO: remove all cookbok imports
-from tools.toolkits import (
-    test_documentation_toolkit,
-    test_execution_toolkit,
-)
-from tools.ui.chain import playwright_chain
-
+load_dotenv()
 set_debug(True)
 
-llm = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo-0125")
+llm = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo")
 
 
-# region Graph
 class AgentState(TypedDict):
     # The input string
     input: str
@@ -62,9 +58,121 @@ class AgentState(TypedDict):
     # this state should be ADDED to the existing values (not overwrite it)
     intermediate_steps: list[tuple[AgentAction, str]]
     # playwight context, gives the agent recommendations on locators
-    playwright_context: str
+    current_html: str
+    current_url: str
+    current_page_text: str
     # The next agent to call
     next: str
+
+
+# region Plan
+class PlanExecute(AgentState):
+    plan: List[str]
+    past_steps: List[Tuple]
+    response: str
+
+
+class Plan(BaseModel):
+    """Plan to follow in future"""
+
+    completed: bool = Field(description="Whether the plan is completed or not")
+    final_answer: str = Field(description="The final answer, if the plan is completed")
+    steps: List[str] = Field(
+        description="different steps to follow, should be in sorted order"
+    )
+
+
+
+
+planner_prompt = ChatPromptTemplate.from_template(
+    """For the given objective, come up with a simple step by step plan.
+     This plan should involve individual tasks, that if executed correctly will yield the correct answer. Do not add any superfluous steps. \
+    The result of the final step should be the final answer. Make sure that each step has all the information needed - do not skip steps.
+
+    You have currently done the follow steps:
+    playwright = await async_playwright().start()
+    async_browser = await playwright.chromium.connect_over_cdp(
+        "ws://localhost:3000",
+    )
+    page = await async_browser.new_page()
+    You are currently on the following page:
+    {current_url}
+
+    You have access to a Chrome Browser that is represented by the following Page Object Model. 
+    {current_html}
+
+    Objective:
+    {objective}"""
+)
+planner_prompt = ChatPromptTemplate.from_template(
+    """
+    Imaging you are an engineer navigating webpages and you have been given a task to complete.
+
+    You have already done the following steps:
+    playwright = await async_playwright().start()
+    async_browser = await playwright.chromium.connect_over_cdp(
+        "ws://localhost:3000",
+    )
+    page = await async_browser.new_page()
+
+    For the given objective, come up with a simple step by step plan.
+    This plan should involve individual tasks, that if executed correctly will yield the correct answer. Do not add any superfluous steps. \
+    The result of the final step should be the final answer. Make sure that each step has all the information needed - do not skip steps.
+
+    You are currently on the following page:
+    {current_url}
+
+    You have access to a Chrome Browser that is represented by the following Page Object Model. 
+    {current_html}
+
+    Objective:
+    {objective}"""
+)
+planner = create_structured_output_runnable(Plan, llm, planner_prompt)
+
+replanner_prompt = ChatPromptTemplate.from_template(
+    """
+    Imaging you are an engineer navigating webpages and you have been given a task to complete.
+    For the given objective, determine if any further steps are needed to fulfill the objective. 
+    Provide a final answer if no further steps are needed.
+    Otherwise, fill out the plan.
+    This plan should involve individual tasks, that if executed correctly will yield the correct answer. 
+    Do not add any superfluous steps.
+    Make sure that each step has all the information needed - do not skip steps.
+    Assume that each step in the plan involves interacting with a playwright page object in python. 
+
+    Also some notes on navigating websites:
+    * After you fill a field, if you expect the page to change, you shoud press enter, or click a submit button.
+
+    You are currently on the following page:
+    {current_url}
+    
+    You have access to a Chrome Browser that is represented by the following Page Object Model. 
+    {current_html}
+
+    Your objective was this:
+    {input}
+
+    Your original plan was this:
+    {plan}
+
+    You have currently done the follow steps:
+    {past_steps}
+
+    Only add steps to the plan that still NEED to be done. 
+    Do not return previously done steps as part of the plan.
+    Do not include steps that verify the final answer. Only include steps that are actionable. 
+    """
+)
+
+replanner = create_openai_fn_runnable(
+    functions=[Plan],
+    llm=llm,
+    prompt=replanner_prompt,
+)
+# endregion
+
+# region Graph
 
 
 def create_team_supervisor(llm: ChatOpenAI, system_prompt, members) -> str:
@@ -116,24 +224,15 @@ def create_observation_agent(llm, agent_name: str = ""):
                 "system",
                 " You are a observation agent, you're task is to determine what the next action should be."
                 " If you believe the next action would be to interact with an element, please ALWAYS provide a locator"
-                " that can be used by playwright to interact with the element. Do not ask for additional information"
+                " that can be used by playwright to interact with the element. Do not ask for additional information",
             ),
-            ("ai", "{playwright_context}"),
+            ("ai", "{current_html}"),
             MessagesPlaceholder(variable_name="messages"),
             ("human", "{input}"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ]
     )
-    agent = (
-        RunnablePassthrough.assign(
-            agent_scratchpad=lambda x: format_to_openai_tool_messages(
-                x["intermediate_steps"]
-            )
-        )
-        | prompt
-        | llm
-        | OpenAIToolsAgentOutputParser()
-    )
+    agent = prompt | llm | OpenAIToolsAgentOutputParser()
     agent.name = agent_name
     return agent
 
@@ -151,7 +250,7 @@ def create_agent(llm, tools, system_message: str, agent_name: str = ""):
                 " Execute what you can to make progress."
                 " You have access to the following tools: {tool_names}.\n",
             ),
-            ("ai", "{playwright_context}"),
+            ("ai", "{current_html}"),
             MessagesPlaceholder(variable_name="messages"),
             ("human", "{input}"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
@@ -164,6 +263,56 @@ def create_agent(llm, tools, system_message: str, agent_name: str = ""):
     return agent
 
 
+def create_nav_agent(llm, tools, system_message: str, agent_name: str = ""):
+    """Create an agent executor"""
+
+    _prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                " Use the provided tools to progress towards aiding in performing the users request."
+                " If you are unable to fully act, that's OK"
+                " Execute what you can to make progress."
+                " You have access to the following tools: {tool_names}.\n"
+            ),
+            ("ai", "you are currently on the following page: {current_url}"),
+            ("ai", "Here is a playwright model of the current page your tools have access to:\n"
+             "{current_html}"),
+            MessagesPlaceholder(variable_name="messages"),
+            ("human", "I have executed the following steps: {past_steps}"),
+            ("human", "{input}"),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ]
+    )
+    _prompt = _prompt.partial(tool_names=", ".join([tool.name for tool in tools]))
+    agent = create_openai_tools_agent(llm, tools, _prompt)
+    agent_executor = AgentExecutor(
+        agent=agent,
+        tools=tools,
+        callbacks=[cl.AsyncLangchainCallbackHandler()],
+        return_intermediate_steps=True,
+        handle_parsing_errors=True,
+        max_iterations=20
+    )
+    return agent_executor
+
+
+async def execute_plan_node(state: PlanExecute, agent, name):
+    task = state["plan"][0]
+    _state = state.copy()
+    _state["input"] = task
+    _state.pop("intermediate_steps", None)
+
+    # Map state to AgentState, removing all keys that are not in AgentState
+    
+    agent_response = await agent.ainvoke(
+        _state
+    )
+
+    state["past_steps"].append((task, agent_response.get("output", "")))
+    return state
+
+
 async def _supervisor_node(state, agent, name):
     result = agent.invoke(state)
     return result
@@ -173,7 +322,7 @@ async def _observation_node(state, agent, name):
     # response = await agent.ainvoke(state)
     # action = AgentAction(tool="Observation Agent", log=response.log, tool_input="")
     # # add observation to intermediate steps
-    # state["intermediate_steps"].append((action, action.log))
+    # state["agent_scratchpad"].append((action, action.log))
     return state
 
 
@@ -181,6 +330,7 @@ async def tool_node(state):
     tools = cl.user_session.get("tools")
     tool_executor = ToolExecutor(tools)
     # Get the most recent agent_outcome - this is the key added in the `agent` above
+    outcomes = []
     for action in state["agent_outcome"]:
         output = await tool_executor.ainvoke(action)
         state["intermediate_steps"].append((action, output))
@@ -191,8 +341,6 @@ async def tool_node(state):
 async def agent_node(state, agent, name):
     # to decrease the chances of running out of memory we trim the messages
     # warning if you see tool errors, this is the first place to look
-
-    await trim_intermediate_steps(state)
     # cast messages to a sequence
     response = await agent.ainvoke(state)
     state["agent_outcome"] = response
@@ -203,61 +351,42 @@ async def agent_node(state, agent, name):
     return state
 
 
-
-
 async def set_context(state):
     """
     This agent is responsible for setting up the context
     """
-    state = await playwright_context_agent(state)
+    browser = cl.user_session.get("browser")
+    page = await aget_current_page(browser)
+    content = await page.content()
+    stripped_content = condense_html(content)
+    if num_tokens_from_string(stripped_content) > 4000:
+        html_docs = html_vector_store(stripped_content)
+
+        most_relevant_html = html_docs.max_marginal_relevance_search(state["input"] + "\n".join(state["plan"]), k=4)
+    else:
+        most_relevant_html = stripped_content
+    state["current_html"] = most_relevant_html
+    state["current_page_text"] = get_page_content(content)
+    state["current_url"] = page.url
     return state
 
 
-async def playwright_context_agent(state):
+async def set_starting_context(state):
     """
-    This agent is responsible for finding the playwright context
-    the playwright chain is responsible for finding the locators
-    the playwright retriever is responsible for finding relevant links on the page
+    This agent is responsible for setting up the starting context
     """
     browser = cl.user_session.get("browser")
     page = await aget_current_page(browser)
     content = await page.content()
-    last_input = ""
-    last_outcome = ""
-    if state["agent_outcome"]:
-        for action in state["agent_outcome"]:
-            last_input += action.log
-
-    if state["intermediate_steps"]:
-        last_outcome = state["intermediate_steps"][-1][1]
-
-    # check if there are previous messages
-    if len(state["messages"]) > 0:
-        last_ai_message = next(
-            (
-                message.content
-                for message in reversed(state["messages"])
-                if isinstance(message, AIMessage)
-            ),
-            None,
-        )
+    if num_tokens_from_string(content) > 4000:
+        html_docs = html_vector_store(content)
+        most_relevant_html = html_docs.max_marginal_relevance_search(state["input"] + "\n".join(state["plan"]), k=4)
     else:
-        last_ai_message = ""
-
-    # Context is test context + last intermediate step + input
-    context_input = (
-        state["input"]
-        + "\n"
-        + last_input
-        + "\n"
-        + last_outcome
-        + "\n"
-        + last_ai_message
-    )
-    outcome = await playwright_chain(content).ainvoke(context_input)
-    if "Not Applicable" in str(outcome):
-        return state
-    state["playwright_context"] = outcome
+        most_relevant_html = condense_html(content)
+    state["current_html"] = most_relevant_html
+    state["current_url"] = page.url
+    state["current_page_text"] = get_page_content(content)
+    state["past_steps"] = []
     return state
 
 
@@ -282,6 +411,32 @@ def supervisor_router(state):
             return "FINISH"
 
 
+async def plan_step(state: PlanExecute):
+    plan = await planner.ainvoke(
+        {"objective": state["input"], "current_html": state["current_html"], "current_url": state["current_url"]}
+    )
+    return {"plan": plan.steps}
+
+
+async def replan_step(state: PlanExecute):
+    output = await replanner.ainvoke(state)
+
+    if output.final_answer:
+        return {
+                "response": output.final_answer,
+                "messages": state["messages"] + [AIMessage(content=output.final_answer, name="Test Executor")]
+                }
+    else:
+        return {"plan": output.steps}
+
+
+def should_end(state: PlanExecute):
+    if state["response"]:
+        return True
+    else:
+        return False
+
+
 # endregion
 
 
@@ -302,22 +457,14 @@ class UIAppHandler(BaseCallbackHandler):
 
 def set_test_executor_node(async_browser):
     tools = cl.user_session.get("tools", [])
-    test_executioner_tools = test_execution_toolkit.get_tools(
-        async_browser=async_browser
+    test_executer_tools = test_execution_toolkit.get_tools(async_browser=async_browser)
+    test_executer_agent = create_nav_agent(llm, test_executer_tools, "")
+    test_executor_node = functools.partial(
+        execute_plan_node, agent=test_executer_agent, name="Test Executor"
     )
-    test_executioner_agent = create_agent(
-        llm,
-        test_executioner_tools,
-        system_message="You should execute the test information provided by the notes you have been given"
-        "and provide accurate details on what you have performed. Please stop when you appear to be unable to"
-        "perform an action after 4 attempts",
-        agent_name="Test Executor",
-    )
-    test_executioner_node = functools.partial(
-        agent_node, agent=test_executioner_agent, name="Test Executor"
-    )
-    cl.user_session.set("test_executioner_node", test_executioner_node)
-    cl.user_session.set("tools", tools + test_executioner_tools)
+    cl.user_session.set("test_executor_node", test_executor_node)
+    cl.user_session.set("tools", tools + test_executer_tools)
+
 
 def set_test_documentor_node():
     tools = cl.user_session.get("tools", [])
@@ -335,6 +482,7 @@ def set_test_documentor_node():
     cl.user_session.set("test_documentor_node", test_documentor_node)
     cl.user_session.set("tools", tools + test_documentor_tools)
 
+
 def set_observation_node():
     observation_agent = create_observation_agent(
         llm,
@@ -344,6 +492,7 @@ def set_observation_node():
         _observation_node, agent=observation_agent, name="Observation Agent"
     )
     cl.user_session.set("observation_node", observation_node)
+
 
 def set_supervisor_node():
     supervisor_agent = create_team_supervisor(
@@ -360,16 +509,17 @@ def set_supervisor_node():
         " save, update, manage, and document."
         " Given the following user request, "
         " respond with the worker to act next. Each worker will perform a"
-        " to the best of their ability and then report back", 
+        " to the best of their ability and then report back",
         [
             "Test Executor",
             "Test Documentor",
-        ]
+        ],
     )
     supervisor_node = functools.partial(
         _supervisor_node, agent=supervisor_agent, name="supervisor"
     )
     cl.user_session.set("supervisor_node", supervisor_node)
+
 
 @cl.step
 async def screenshot():
@@ -378,7 +528,7 @@ async def screenshot():
     current_step = cl.context.current_step
     # Simulate a running task
     # wait for network idle
-    await page.wait_for_load_state("networkidle")
+    # await page.wait_for_load_state("networkidle")
 
     _screenshot = cl.Image(
         name="screenshot",
@@ -495,39 +645,6 @@ async def trim_messages(messages):
     cl.user_session.set("messages", messages)
 
 
-@cl.step
-async def trim_intermediate_steps(state):
-    max_intermediate_steps = 10
-    if state["agent_outcome"]:
-        max_intermediate_steps += len(state["agent_outcome"])
-
-    if len(state["intermediate_steps"]) > max_intermediate_steps:
-        # Loop in reverse to avoid index issues when removing elements
-        # We want to remove the last element if it is the same as the second last element
-        for i in range(
-            len(state["intermediate_steps"]) - 2, -1, -1
-        ):  # Start from second-last element
-            if (
-                state["intermediate_steps"][i][0].tool
-                == state["intermediate_steps"][i + 1][0].tool
-                and state["intermediate_steps"][i][0].tool_input
-                == state["intermediate_steps"][i + 1][0].tool_input
-            ):
-                state["intermediate_steps"].pop(i)
-
-        # If we still have too many intermediate steps, then we remove the from the top
-        while len(state["intermediate_steps"]) > max_intermediate_steps:
-            last_intermediate_step = state["intermediate_steps"].pop(0)
-            # save the last intermediate step into the session, just in case we need it
-            intermediate_step_history = cl.user_session.get(
-                "intermediate_step_history", []
-            )
-            intermediate_step_history.append(last_intermediate_step)
-            cl.user_session.set("intermediate_step_history", intermediate_step_history)
-
-    return state
-
-
 # endregion
 
 
@@ -586,6 +703,11 @@ class UITestProfile:
     async def process_message(message):
 
         history = cl.user_session.get("messages")  # type: ChatMessageHistory
+        history = ChatMessageHistory(messages=history)
+        memory = ConversationTokenBufferMemory(
+            llm=llm, chat_memory=history, memory_key="messages", return_messages=True
+        )
+
         actions = [
             cl.Action(
                 name="Open debug window", value="example_value", description="Click me!"
@@ -595,15 +717,59 @@ class UITestProfile:
 
         await load_files(message)
 
-        test_executor_node = cl.user_session.get("test_executioner_node")
+        # region Executor Workflow
+        execulte_plan_node = cl.user_session.get("test_executor_node")
+        executor_workflow = StateGraph(PlanExecute)
+
+        executor_workflow.add_node("start_context", set_starting_context)
+        # add the html context to the state
+        executor_workflow.add_node("set_context", set_context)
+
+        # Add the plan node
+        executor_workflow.add_node("planner", plan_step)
+
+        # Add the execution step
+        executor_workflow.add_node("agent", execulte_plan_node)
+
+        # Add a replan node
+        executor_workflow.add_node("replan", replan_step)
+
+        executor_workflow.set_entry_point("start_context")
+
+        # From start context we go to planner
+        executor_workflow.add_edge("start_context", "planner")
+        # From plan we go to agent
+        executor_workflow.add_edge("planner", "agent")
+
+        # From agent, we set the context and then replan
+        executor_workflow.add_edge("agent", "set_context")
+
+        executor_workflow.add_edge("set_context", "replan")
+
+        executor_workflow.add_conditional_edges(
+            "replan",
+            # Next, we pass in the function that will determine which node is called next.
+            should_end,
+            {
+                # If `tools`, then we call the tool node.
+                True: END,
+                False: "agent",
+            },
+        )
+
+        # Finally, we compile it!
+        # This compiles it into a LangChain Runnable,
+        # meaning you can use it as you would any other runnable
+        execute_graph = executor_workflow.compile()
+        # endregion
+
         test_documentor_node = cl.user_session.get("test_documentor_node")
         observation_node = cl.user_session.get("observation_node")
         supervisor_node = cl.user_session.get("supervisor_node")
 
         workflow = StateGraph(AgentState)
 
-        workflow.add_node("Context Manager", set_context)
-        workflow.add_node("Test Executor", test_executor_node)
+        workflow.add_node("Test Executor", execute_graph)
         workflow.add_node("Test Documentor", test_documentor_node)
         workflow.add_node("Observation Agent", observation_node)
         workflow.add_node("supervisor", supervisor_node)
@@ -625,7 +791,7 @@ class UITestProfile:
             "supervisor",
             supervisor_router,
             {
-                test_executor_node.keywords["name"]: "Context Manager",
+                execulte_plan_node.keywords["name"]: "Test Executor",
                 test_documentor_node.keywords["name"]: test_documentor_node.keywords[
                     "name"
                 ],
@@ -633,8 +799,7 @@ class UITestProfile:
             },
         )
 
-        workflow.add_edge("call_tool", "Context Manager")
-        workflow.add_edge("Context Manager", "Observation Agent")
+        workflow.add_edge("call_tool", "Observation Agent")
 
         workflow.add_conditional_edges(
             "Observation Agent",
@@ -649,19 +814,19 @@ class UITestProfile:
             },
         )
         workflow.set_entry_point("supervisor")
-        graph = workflow.compile()
+        main_workflow = workflow.compile()
 
         state = cl.user_session.get("state", {})
 
         state["input"] = message.content
-        state["messages"] = history
+        state["messages"] = memory.buffer_as_messages
         state["intermediate_steps"] = []
         state["agent_outcome"] = None
-        state["playwright_context"] = (
-            state["playwright_context"] if "playwright_context" in state else ""
+        state["current_html"] = (
+            state["current_html"] if "current_html" in state else ""
         )
 
-        res = await graph.ainvoke(
+        res = await execute_graph.ainvoke(
             state,
             config={
                 "callbacks": [cl.LangchainCallbackHandler(), UIAppHandler()],
@@ -669,23 +834,21 @@ class UITestProfile:
             },
         )
         # pop last message from history
-        last_message = history.pop()
+        last_message = history.messages.pop() if history.messages else None
 
-        if last_message.content == message.content:
+        history.messages.append(HumanMessage(content=message.content))
+        if not last_message:
             # this means that the agent did not respond
             # we need to add a message to the history
             # indicating that the agent did not respond
-            history.append(
+            history.messages.append(
                 SystemMessage(content="The agent failed to respond to the user request")
             )
         # add messages back to history
-        history.append(HumanMessage(content=message.content))
-        history.append(last_message)
-
-        await trim_messages(history)
+        else:
+            history.messages.append(res["messages"][-1])
 
         cl.user_session.set("state", res)
         await cl.Message(content=res["messages"][-1].content, actions=actions).send()
 
-        set_test_documentor_node() # reset the test documentor node, so it refreshes the db
-
+        set_test_documentor_node()  # reset the test documentor node, so it refreshes the db

@@ -87,6 +87,6 @@ class FillTool(BaseBrowserTool):
                 strict=self.playwright_strict,
                 timeout=self.playwright_timeout,
             )
-        except PlaywrightTimeoutError:
+        except Exception as e:
             return f"Unable to fill element '{selector}'"
         return f"Filled element '{selector}'"

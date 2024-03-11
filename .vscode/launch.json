@@ -58,7 +58,8 @@
             "module": "chainlit",
             "console": "integratedTerminal",
             "args": ["run", "app.py", "-w", "-d"],
-            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/multi_agent_ui"        
+            "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/multi_agent_ui"  , 
+            "justMyCode": false     
         }, 
         {
             "name": "LangGraph GraphQL", 
@@ -68,6 +69,7 @@
             "console": "integratedTerminal",
             "args": ["run", "app.py", "-w", "-d"],
             "cwd": "${workspaceFolder}/ai_assisted_test_repo/cookbooks/langgraph_graphql",
+            "justMyCode": false
         }
 
     ]
